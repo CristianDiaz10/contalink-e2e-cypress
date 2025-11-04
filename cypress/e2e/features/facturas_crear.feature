@@ -1,7 +1,8 @@
-# language: es
-Característica: Facturas - Crear
-  Escenario: Crear FACTURA-CRIS vigente
-    Dado que abro la app
-    Cuando ingreso el código de acceso válido
-    Cuando creo una nueva factura válida
-    Entonces debo ver la factura creada en la lista con estado Vigente
+# language: en
+Feature: Facturas - Crear
+
+  Scenario: Crear FACTURA-CRIS vigente
+    Given que abro la app
+    When ingreso el código de acceso válido
+    And creo una nueva factura válida
+    Then debo ver la factura creada en la lista con estado Vigente

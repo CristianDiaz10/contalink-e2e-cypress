@@ -1,6 +1,7 @@
-# language: es
-Característica: Acceso con código
-  Escenario: Acceso exitoso con código válido
-    Dado que abro la app
-    Cuando ingreso el código de acceso válido
-    Entonces debo ver el dashboard
+# language: en
+Feature: Acceso con código
+
+  Scenario: Acceso exitoso con código válido
+    Given que abro la app
+    When ingreso el código de acceso válido
+    Then debo ver el dashboard

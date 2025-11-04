@@ -1,8 +1,9 @@
-# language: es
-Característica: Logout
-  Escenario: Cerrar sesión desde el dashboard
-    Dado que abro la app
-    Cuando ingreso el código de acceso válido
-    Y debo ver el dashboard
-    Cuando hago logout
-    Entonces debo regresar a la pantalla de acceso
+# language: en
+Feature: Logout
+
+  Scenario: Cerrar sesión desde el dashboard
+    Given que abro la app
+    When ingreso el código de acceso válido
+    And debo ver el dashboard
+    And hago logout
+    Then debo regresar a la pantalla de acceso

@@ -1,0 +1,16 @@
+{
+  // tus .feature
+  "cucumberautocomplete.features": [
+    "features/**/*.feature",
+    "cypress/e2e/**/*.feature"
+  ],
+
+  // 👀 aquí le decimos: ve tanto a .ts como a .js
+  "cucumberautocomplete.steps": [
+    "cypress/e2e/step_definitions/**/*.{ts,js}"
+  ],
+
+  "cucumberautocomplete.language": "es",
+  "cucumberautocomplete.syncfeatures": true,
+  "cucumberautocomplete.strictGherkinCompletion": true
+}

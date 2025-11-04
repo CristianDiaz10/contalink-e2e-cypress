@@ -4,46 +4,51 @@
 // Objetivo: Verificar estabilidad y velocidad de respuesta
 // ======================================================================
 
-import http from "k6/http";
-import { check, sleep } from "k6";
-import { Trend } from "k6/metrics";
+// Importamos los módulos base de k6
+import http from "k6/http";     // Para hacer solicitudes HTTP
+import { check, sleep } from "k6"; // Para validaciones y pausas entre requests
+import { Trend } from "k6/metrics"; // Para crear métricas personalizadas (tiempos, etc.)
 
 // ----------------------------------------------------------------------
 // ⚙️ CONFIGURACIÓN DEL TEST
 // ----------------------------------------------------------------------
 export const options = {
   scenarios: {
+    // Definimos un escenario llamado "prueba_constante"
     prueba_constante: {
-      executor: "constant-arrival-rate", // Mantiene un ritmo constante de peticiones
-      rate: 20,                          // 20 peticiones por segundo
-      timeUnit: "1s",
-      duration: "30s",                   // Ejecuta por 30 segundos
-      preAllocatedVUs: 20,               // Usuarios virtuales mínimos
-      maxVUs: 50,                        // Máximos si se necesita más carga
+      executor: "constant-arrival-rate", // Tipo de ejecución: ritmo constante de solicitudes
+      rate: 20,                          // 🔢 20 peticiones por segundo
+      timeUnit: "1s",                    // Cada segundo se inician 20 peticiones
+      duration: "30s",                   // 🕒 Durará 30 segundos
+      preAllocatedVUs: 20,               // Usuarios virtuales mínimos preasignados
+      maxVUs: 50,                        // Máximo de VUs que puede escalar
     },
   },
   thresholds: {
-    http_req_failed: ["rate<0.05"],      // Menos del 5% de errores es aceptable
-    http_req_duration: ["p(95)<800"],    // El 95% de las respuestas < 800 ms
+    // Límites de aceptación (si se superan, k6 marcará el test como fallido)
+    http_req_failed: ["rate<0.05"],      // Menos del 5% de fallos permitidos
+    http_req_duration: ["p(95)<800"],    // 95% de las respuestas deben tardar < 800ms
   },
 };
 
 // ----------------------------------------------------------------------
 // 🔗 DATOS DE LA PRUEBA
 // ----------------------------------------------------------------------
-const BASE_URL = "https://candidates-api.contalink.com";
-const ENDPOINT = "/V1/invoices?page=1&invoice_number=FAC-7081986";
-const AUTH_TOKEN = "UXTY789@!!1"; // Token de autenticación
+const BASE_URL = "https://candidates-api.contalink.com"; // URL base del servicio
+const ENDPOINT = "/V1/invoices?page=1&invoice_number=FAC-7081986"; // Endpoint a probar
+const AUTH_TOKEN = "UXTY789@!!1"; // ⚠️ Token hardcodeado (debería venir de variables de entorno)
+
+// Creamos una métrica personalizada para medir tiempos de respuesta
 const tiempoRespuesta = new Trend("tiempo_respuesta_ms", true);
 
 // ----------------------------------------------------------------------
 // 🚀 ESCENARIO PRINCIPAL
 // ----------------------------------------------------------------------
 export default function () {
-  // Construye la URL final
+  // 🔗 Construimos la URL completa a la que se enviará la solicitud
   const url = `${BASE_URL}${ENDPOINT}`;
 
-  // Envía una solicitud GET a la API
+  // 📡 Enviamos una petición GET autenticada
   const res = http.get(url, {
     headers: {
       Authorization: AUTH_TOKEN,
@@ -51,18 +56,18 @@ export default function () {
     },
   });
 
-  // Verificaciones básicas para cada respuesta
+  // ✅ Validamos respuestas por cada request
   check(res, {
-    "✅ Código 200": (r) => r.status === 200,
-    "⚡ Menos de 800ms": (r) => r.timings.duration < 800,
+    "✅ Código 200": (r) => r.status === 200, // Responde correctamente
+    "⚡ Menos de 800ms": (r) => r.timings.duration < 800, // Tiempo aceptable
     "📦 Contiene 'invoice_number'": (r) =>
-      r.body && r.body.includes("invoice_number"),
+      r.body && r.body.includes("invoice_number"), // Verifica estructura esperada
   });
 
-  // Guarda el tiempo de respuesta
+  // 📊 Guardamos el tiempo de respuesta para la métrica personalizada
   tiempoRespuesta.add(res.timings.duration);
 
-  // Pequeña pausa para simular uso humano
+  // ⏸️ Pausa corta entre peticiones (simula comportamiento humano)
   sleep(0.3);
 }
 
@@ -70,20 +75,28 @@ export default function () {
 // 📊 RESUMEN FINAL (en consola y archivo HTML)
 // ----------------------------------------------------------------------
 export function handleSummary(data) {
-  // Toma métricas de forma segura
+  // --------------------------
+  // 1️⃣ Extraemos las métricas clave
+  // --------------------------
   const dur = data.metrics.http_req_duration || {};
   const err = data.metrics.http_req_failed || {};
   const req = data.metrics.http_reqs || {};
 
-  const promedio = dur.avg ? dur.avg.toFixed(2) : "N/A";
-  const p95 = dur["p(95)"] ? dur["p(95)"].toFixed(2) : "N/A";
-  const total = req.count || 0;
+  // 🧮 Calculamos valores importantes
+  const promedio = dur.avg ? dur.avg.toFixed(2) : "N/A"; // Tiempo medio de respuesta
+  const p95 = dur["p(95)"] ? dur["p(95)"].toFixed(2) : "N/A"; // Percentil 95
+  const total = req.count || 0; // Número total de requests
   const errores = typeof err.rate === "number"
     ? (err.rate * 100).toFixed(2)
-    : "0.00";
+    : "0.00"; // Porcentaje de errores
 
   // --------------------------
-  // 🖥️ Reporte en consola
+  // 2️⃣ Detectamos si se ejecuta en GitHub Actions (variable de entorno)
+  // --------------------------
+  const isCI = !!__ENV.GITHUB_ACTIONS;
+
+  // --------------------------
+  // 3️⃣ Texto bonito para consola
   // --------------------------
   const consola = `
 ══════════════════════════════════════════════════════════════
@@ -110,7 +123,36 @@ export function handleSummary(data) {
 `;
 
   // --------------------------
-  // 🌐 Reporte en HTML (visual)
+  // 4️⃣ Bloques visibles en GitHub Actions
+  // --------------------------
+  // GitHub interpreta "::notice::", "::warning::", "::group::" como anotaciones especiales
+  let gha = "";
+  if (isCI) {
+    gha += "::group::Resumen k6 – invoices\n"; // Agrupa el resumen
+    gha += `endpoint=${BASE_URL}${ENDPOINT}\n`;
+    gha += `total_reqs=${total}\n`;
+    gha += `avg_ms=${promedio}\n`;
+    gha += `p95_ms=${p95}\n`;
+    gha += `error_rate=${errores}%\n`;
+
+    // 🔔 Si algo está fuera de objetivo, mostramos advertencias
+    if (Number(errores) >= 5) {
+      gha += "::warning::La tasa de errores fue mayor o igual al 5%\n";
+    } else {
+      gha += "::notice::Tasa de errores dentro del objetivo (<5%)\n";
+    }
+
+    if (p95 !== "N/A" && Number(p95) >= 800) {
+      gha += "::warning::El p95 estuvo por encima de 800ms\n";
+    } else {
+      gha += "::notice::p95 dentro del objetivo (<800ms)\n";
+    }
+
+    gha += "::endgroup::\n";
+  }
+
+  // --------------------------
+  // 5️⃣ Reporte HTML visual (artefacto del workflow)
   // --------------------------
   const html = `
 <!DOCTYPE html>
@@ -169,9 +211,11 @@ export function handleSummary(data) {
 </html>
 `;
 
-  // Devuelve el reporte a consola y crea un archivo HTML
+  // --------------------------
+  // 6️⃣ Devolvemos el resumen a k6
+  // --------------------------
   return {
-    stdout: consola,
-    "report.html": html,
+    stdout: consola + (isCI ? gha : ""), // 📤 Lo que se imprime en consola/CI
+    "report.html": html,                 // 🗂️ Archivo HTML generado
   };
 }

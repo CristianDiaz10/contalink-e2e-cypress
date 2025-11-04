@@ -1,8 +1,9 @@
-# language: es
-Característica: Facturas - Eliminar
-  Escenario: Eliminar FACTURA-CRIS
-    Dado que abro la app
-    Cuando ingreso el código de acceso válido
-    Y busco la factura por número
-    Cuando elimino la factura FACTURA-CRIS
-    Entonces la factura debe eliminarse o quedar con estado Eliminada
+# language: en
+Feature: Facturas - Eliminar
+
+  Scenario: Eliminar FACTURA-CRIS
+    Given que abro la app
+    When ingreso el código de acceso válido
+    And busco la factura por número
+    And elimino la factura FACTURA-CRIS
+    Then la factura debe eliminarse o quedar con estado Eliminada

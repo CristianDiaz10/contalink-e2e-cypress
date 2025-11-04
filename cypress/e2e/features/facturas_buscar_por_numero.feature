@@ -1,7 +1,8 @@
-# language: es
-Característica: Facturas - Buscar por número
-  Escenario: Buscar FACTURA-CRIS
-    Dado que abro la app
-    Cuando ingreso el código de acceso válido
-    Cuando busco la factura por número
-    Entonces debo ver FACTURA-CRIS en los resultados
+# language: en
+Feature: Facturas - Buscar por número
+
+  Scenario: Buscar FACTURA-CRIS
+    Given que abro la app
+    When ingreso el código de acceso válido
+    When busco la factura por número
+    Then debo ver FACTURA-CRIS en los resultados
