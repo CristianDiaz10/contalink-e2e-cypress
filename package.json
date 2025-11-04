@@ -1,0 +1,23 @@
+{
+  "name": "contalink-e2e-cypress-cucumber-pom",
+  "version": "3.0.0",
+  "private": true,
+  "description": "E2E tests with Cypress + Cucumber + TypeScript + POM for candidates-qa.contalink.com",
+  "scripts": {
+    "cy:open": "cypress open --browser chrome",
+    "cy:run": "cypress run --headed --browser chrome",
+    "cy:headless": "cypress run --browser chrome",
+    "test": "npm run cy:run"
+  },
+  "devDependencies": {
+    "@badeball/cypress-cucumber-preprocessor": "^20.1.2",
+    "@bahmutov/cypress-esbuild-preprocessor": "^2.2.7",
+    "@types/node": "^20.14.9",
+    "chai": "^6.2.0",
+    "cypress": "^13.17.0",
+    "cypress-xpath": "^2.0.1",
+    "dotenv": "^17.2.3",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.6.3"
+  }
+}

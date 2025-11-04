@@ -1,0 +1,119 @@
+# =====================================================================
+# 🧪 Workflow: E2E (Cypress + Cucumber + POM + k6)
+# ---------------------------------------------------------------------
+# Ejecuta:
+#   1. Cypress (funcional/UI)
+#   2. k6 (performance API)
+#   3. Sube el reporte de k6
+#   4. Imprime un resumen bonito al final 👀
+# =====================================================================
+
+name: E2E (Cypress + Cucumber + POM + k6)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ---------------------------------------------------------------
+      # 1️⃣ Descargar el código del repo
+      # ---------------------------------------------------------------
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---------------------------------------------------------------
+      # 2️⃣ Configurar Node (para Cypress)
+      # ---------------------------------------------------------------
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # ---------------------------------------------------------------
+      # 3️⃣ Instalar dependencias
+      # ---------------------------------------------------------------
+      - name: Install dependencies
+        run: npm ci
+
+      # ---------------------------------------------------------------
+      # 4️⃣ Correr Cypress (navegador + tus .feature)
+      # ---------------------------------------------------------------
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6
+        with:
+          browser: chrome
+          headed: false
+          record: false
+        env:
+          BASE_URL: https://candidates-qa.contalink.com
+          ACCESS_CODE: ${{ secrets.ACCESS_CODE }}
+          INVOICE_NUMBER: FACTURA-CRIS
+          INVOICE_TOTAL: "100"
+          INVOICE_STATUS: Vigente
+          API_BASE_URL: https://candidates-api.contalink.com
+          AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
+
+      # ---------------------------------------------------------------
+      # 5️⃣ Instalar k6 (para performance)
+      # ---------------------------------------------------------------
+      - name: Install k6
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      # ---------------------------------------------------------------
+      # 6️⃣ Ejecutar el test de performance
+      #     (usa tu archivo k6-invoices.js)
+      # ---------------------------------------------------------------
+      - name: Run k6 performance test
+        run: k6 run k6-invoices.js
+
+      # ---------------------------------------------------------------
+      # 7️⃣ Subir el reporte de k6 (si existe)
+      #     → lo podrás descargar desde la pestaña "Actions"
+      # ---------------------------------------------------------------
+      - name: Upload k6 HTML report
+        if: always()               # se ejecuta aunque Cypress o k6 fallen
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-performance-report
+          path: report.html
+
+      # ---------------------------------------------------------------
+      # 8️⃣ Resumen final en consola (BONUS)
+      #     Aquí NO mandamos correo, solo mostramos un mensaje bonito.
+      #     ${{ job.status }} será "success" o "failure"
+      # ---------------------------------------------------------------
+      - name: Print final summary
+        if: always()               # siempre quiero ver el resumen
+        run: |
+          echo "────────────────────────────────────────"
+          echo "📦 Proyecto : ${{ github.repository }}"
+          echo "🧪 Workflow : E2E (Cypress + k6)"
+          echo "👤 Disparado por : ${{ github.actor }}"
+          echo "🌿 Branch : ${{ github.ref_name }}"
+          echo "────────────────────────────────────────"
+
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Resultado : TODO OK 🎉"
+            echo "   - Cypress pasó"
+            echo "   - k6 se ejecutó"
+            echo "   - Revisa 'Artifacts' para ver el reporte de k6 (report.html)"
+          else
+            echo "❌ Resultado : ALGO FALLÓ"
+            echo "   - Ve a la pestaña 'Actions' > este run"
+            echo "   - Abre los logs para ver qué step tronó"
+            echo "   - Si k6 falló, revisa también el report.html"
+          fi
+
+          echo "────────────────────────────────────────"
+          echo "ℹ️ Logs completos aquí:"
+          echo "   ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "────────────────────────────────────────"
