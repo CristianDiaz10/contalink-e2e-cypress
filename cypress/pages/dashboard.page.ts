@@ -26,8 +26,13 @@ export class DashboardPage {
   //    dashboardPage.expectLoaded();
   // ----------------------------------------------------------------
   expectLoaded() {
+    cy.log("📊 Verificando que el Dashboard haya cargado correctamente...");
     cy.contains(/Dashboard|Inicio|Bienvenido|Resumen/i, { timeout: 10000 })
-      .should("be.visible"); // asegura que el texto sea visible
+      .should(
+        "be.visible",
+        "✅ Se detectó el texto de bienvenida o título del Dashboard, confirmando que la vista principal cargó correctamente."
+      );
+    cy.log("🏠 El usuario se encuentra en el Dashboard.");
   }
 }
 

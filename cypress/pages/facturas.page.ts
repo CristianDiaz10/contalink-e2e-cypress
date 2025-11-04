@@ -5,7 +5,7 @@
 // Aquí concentro **todas** las acciones que puedo hacer en la pantalla
 // de Facturas: abrir el módulo, crear una factura, buscar, marcar
 // "incluir eliminadas", borrar y validar.
-// 
+//
 // La idea es que los step definitions solo digan:
 //   facturasPage.clickCrearNueva()
 //   facturasPage.fillNumeroFactura(...)
@@ -16,101 +16,100 @@
 export class FacturasPage {
   // ------------------------------------------------------------------
   // (opcional) Navegar al módulo de facturas desde el menú
-  // La dejo por si en algún momento la app ya no nos manda directo.
-  // Busca un enlace/botón que diga "Facturas" y lo abre.
   // ------------------------------------------------------------------
   goToModule() {
+    cy.log("📂 Abriendo módulo de Facturas desde el menú…");
     cy.contains('a,button,[role="menuitem"]', /Facturas/i, { timeout: 10000 }).click();
-    cy.contains(/Facturas/i).should("be.visible");
+    cy.contains(/Facturas/i)
+      .should(
+        "be.visible",
+        "✅ Se abrió la pantalla de facturas y el título es visible."
+      );
   }
 
   // ================================================================
   // 🧾 CREAR FACTURA
   // ================================================================
-  // 1. Clic en "Nueva factura"
-  // 2. Llenar número
-  // 3. Llenar total
-  // 4. Seleccionar estado
-  // 5. Guardar
-  // ================================================================
 
   // 1) abrir el formulario de nueva factura
   clickCrearNueva() {
+    cy.log("🆕 Voy a abrir el formulario para crear una factura…");
+
     // este XPath es el que vimos en tu app real
     const NEW_BTN_XPATH = '/html/body/app-root/div/div/app-invoices/div[1]/button';
 
     cy.xpath(NEW_BTN_XPATH, { timeout: 10000 })
-      .should("exist")     // el botón existe
-      .and("be.visible")   // se ve
-      .click({ force: true }); // lo clickeamos aunque quede tapado
+      .should("exist", "✅ Existe el botón de 'Nueva factura' en la pantalla.")
+      .and("be.visible", "✅ El botón de 'Nueva factura' está visible para hacer clic.")
+      .click({ force: true });
 
     // después de dar clic debería aparecer el form con #invoiceNumber
-    cy.get("#invoiceNumber", { timeout: 10000 }).should("be.visible");
+    cy.get("#invoiceNumber", { timeout: 10000 })
+      .should(
+        "be.visible",
+        "✅ Se abrió el formulario de factura (el campo 'Número de factura' está visible)."
+      );
   }
 
   // 2) llenar el número de factura
   fillNumeroFactura(numero: string) {
+    cy.log(`✏️ Escribiendo número de factura: ${numero}`);
     cy.get("#invoiceNumber", { timeout: 10000 })
-      .should("be.visible")
+      .should("be.visible", "✅ El campo 'Número de factura' está disponible.")
       .clear()
       .type(numero);
   }
 
-  // 3) llenar el total (tu app tiene varios inputs de número, por eso hago .first())
+  // 3) llenar el total
   fillTotal(total: string) {
+    cy.log(`💲 Escribiendo el total de la factura: ${total}`);
     cy.get('input[name="total"], #total, input[placeholder*="Total"], input[type="number"]')
       .first()
-      .should("be.visible")
+      .should("be.visible", "✅ El campo de 'Total' está visible.")
       .clear()
       .type(total);
   }
 
   // 4) seleccionar el estado
-  // ----------------------------------------------------------
-  // Tu select de estado a veces viene con muchas opciones
-  // y el valor puede estar en mayúsculas, minúsculas o como value.
-  // Por eso aquí hago 3 intentos:
-  //   a. seleccionar por texto visible (Vigente)
-  //   b. seleccionar por value (vigente)
-  //   c. si no, selecciono la opción 2 (#status > option:nth-child(2))
-  // ----------------------------------------------------------
   selectEstado(estado: string) {
+    cy.log(`📋 Intentando seleccionar el estado: "${estado}"…`);
+
     // 1) espero a que el select esté en el DOM y visible
     cy.get("#status", { timeout: 10000 })
-      .should("exist")
-      .and("be.visible");
+      .should("exist", "✅ El selector de 'Estado' existe en el formulario.")
+      .and("be.visible", "✅ El selector de 'Estado' está visible.");
 
     // 2) espero a que tenga al menos UNA opción
-    cy.get("#status option", { timeout: 10000 })
-      .should("have.length.greaterThan", 0);
+    cy.get("#status option", { timeout: 10000 }).should(
+      "have.length.greaterThan",
+      0,
+      "✅ El selector de 'Estado' tiene opciones para elegir."
+    );
 
     // 3) dentro del select veo qué opciones tiene
     cy.get("#status").then(($sel) => {
-      const wanted = estado.trim();              // "Vigente"
-      const wantedLower = wanted.toLowerCase();  // "vigente"
+      const wanted = estado.trim(); // "Vigente"
+      const wantedLower = wanted.toLowerCase();
 
-      // convierto las opciones del DOM a un array JS
       const options = Array.from($sel.find("option"));
 
-      // ¿hay una opción cuyo TEXTO diga "Vigente"?
       const hasByText = options.some(
         (o) => (o.textContent || "").trim().toLowerCase() === wantedLower
       );
-
-      // ¿hay una opción cuyo VALUE sea "vigente"?
       const hasByValue = options.some(
-        (o) =>
-          (o.getAttribute("value") || "").trim().toLowerCase() === wantedLower
+        (o) => (o.getAttribute("value") || "").trim().toLowerCase() === wantedLower
       );
 
       if (hasByText) {
-        // caso ideal: selecciono por texto tal cual
+        cy.log("✅ Encontré la opción por TEXTO visible, la selecciono así.");
         cy.wrap($sel).select(wanted, { force: true });
       } else if (hasByValue) {
-        // caso B: selecciono por value en minúsculas
+        cy.log("✅ Encontré la opción por VALUE, la selecciono así.");
         cy.wrap($sel).select(wantedLower, { force: true });
       } else {
-        // último recurso: tomo la segunda opción
+        cy.log(
+          "⚠️ No encontré la opción exacta, usaré la segunda opción del select (fallback)."
+        );
         cy.wrap($sel)
           .find("option")
           .eq(1)
@@ -121,7 +120,7 @@ export class FacturasPage {
       }
     });
 
-    // 4) log para ver qué quedó seleccionado, muy útil cuando falla en CI
+    // 4) log para ver qué quedó seleccionado
     cy.get("#status")
       .find("option:checked")
       .invoke("text")
@@ -131,14 +130,14 @@ export class FacturasPage {
   }
 
   // 5) enviar el formulario
-  // Ojo: aquí ya no esperamos al XHR porque eso lo hace el step (common.ts)
   submitCrear() {
+    cy.log("💾 Enviando el formulario para crear/guardar la factura…");
     cy.contains("button, [type='submit']", /Crear factura|Guardar|Crear/i, {
       timeout: 10000,
     })
       .scrollIntoView()
-      .should("exist")
-      .and("be.visible")
+      .should("exist", "✅ El botón para guardar la factura está presente.")
+      .and("be.visible", "✅ El botón para guardar la factura está visible.")
       .click({ force: true });
   }
 
@@ -146,30 +145,31 @@ export class FacturasPage {
   // 🔎 Buscar con “Incluir facturas eliminadas”
   // ================================================================
   setIncludeDeletedAndSearch() {
-    // intercepto el GET que va a hacer la app cuando toque "Buscar"
+    cy.log("🗑️ Activando 'Incluir facturas eliminadas' y buscando…");
+
     cy.intercept("GET", "**/V1/invoices**", { times: 1 }).as("getInvoicesFiltered");
 
-    // marco el checkbox "Incluir facturas eliminadas"
     cy.get("#showDeleted", { timeout: 10000 })
-      .should("exist")
-      .and("be.visible")
+      .should("exist", "✅ El checkbox 'Incluir facturas eliminadas' existe.")
+      .and("be.visible", "✅ El checkbox 'Incluir facturas eliminadas' está visible.")
       .then(($cb) => {
         const checked = $cb.is(":checked");
         if (!checked) cy.wrap($cb).check({ force: true });
       });
 
-    // doy clic en el botón Buscar (el que vimos por XPath)
     const SEARCH_BTN_XPATH =
       "/html/body/app-root/div/div/app-invoices/div[2]/app-filter-form/div/div[2]/button[1]";
     cy.xpath(SEARCH_BTN_XPATH, { timeout: 10000 })
-      .should("exist")
-      .and("be.visible")
+      .should("exist", "✅ El botón 'Buscar' existe.")
+      .and("be.visible", "✅ El botón 'Buscar' está visible.")
       .click({ force: true });
 
-    // espero la respuesta y valido que sea 2xx
     cy.wait("@getInvoicesFiltered", { timeout: 20000 }).then((i) => {
       const code = Number(i?.response?.statusCode);
-      expect(code, "status code de búsqueda de facturas")
+      expect(
+        code,
+        "✅ La búsqueda con 'incluir eliminadas' respondió correctamente (código 2xx)."
+      )
         .to.be.gte(200)
         .and.lt(300);
     });
@@ -177,49 +177,52 @@ export class FacturasPage {
 
   // validar que efectivamente aparecieron facturas con estado eliminado/inactivo
   expectDeletedVisible() {
-    cy.contains(/Eliminad[oa]|Inactiv[oa]/i, { timeout: 10000 }).should("exist");
+    cy.log("🔍 Buscando en la tabla una factura que aparezca como eliminada/inactiva…");
+    cy.contains(/Eliminad[oa]|Inactiv[oa]/i, { timeout: 10000 }).should(
+      "exist",
+      "✅ Se encontró al menos una factura marcada como eliminada/inactiva."
+    );
   }
 
   // ================================================================
   // 🔍 Búsqueda por número de factura
   // ================================================================
   searchByNumero(numero: string) {
-    // intercepto el GET para saber cuándo termina la búsqueda
+    cy.log(`🔎 Buscando la factura con número: ${numero}`);
+
     cy.intercept("GET", "**/V1/invoices**", { times: 1 }).as("getInvoicesSearch");
 
-    // escribo en el input de búsqueda (tiene varios nombres, por eso varios selectores)
     cy.get('input[name="factura"], input[placeholder*="Factura"], input[type="text"]')
       .first()
       .clear()
       .type(numero);
 
-    // clic en Buscar
     const SEARCH_BTN_XPATH =
       "/html/body/app-root/div/div/app-invoices/div[2]/app-filter-form/div/div[2]/button[1]";
     cy.xpath(SEARCH_BTN_XPATH, { timeout: 10000 })
-      .should("exist")
-      .and("be.visible")
+      .should("exist", "✅ El botón 'Buscar' existe.")
+      .and("be.visible", "✅ El botón 'Buscar' está visible.")
       .click({ force: true });
 
-    // espero la respuesta y valido
     cy.wait("@getInvoicesSearch", { timeout: 20000 }).then((i) => {
       const code = Number(i?.response?.statusCode);
-      expect(code).to.be.gte(200).and.lt(300);
+      expect(code, "✅ La búsqueda por número respondió correctamente.")
+        .to.be.gte(200)
+        .and.lt(300);
     });
   }
 
   // ================================================================
-  // ⚙️ Utilidades sobre la tabla (reusar en varios steps)
+  // ⚙️ Utilidades sobre la tabla
   // ================================================================
-
-  // devolver la fila que contiene ese número de factura
   rowByNumero(numero: string) {
-    return cy.contains("tr, .row, [role='row']", numero).first();
+    return cy
+      .contains("tr, .row, [role='row']", numero)
+      .first();
   }
 
-  // eliminar una factura por número
   deleteByNumero(numero: string) {
-    // dentro de la fila, busco el botón de eliminar
+    cy.log(`🗑️ Eliminando la factura con número: ${numero}`);
     this.rowByNumero(numero).within(() => {
       cy.get(
         'button[title="Eliminar factura"], .btn.btn-sm.btn-error[title="Eliminar factura"]'
@@ -228,7 +231,6 @@ export class FacturasPage {
         .click({ force: true });
     });
 
-    // confirmo en el modal
     cy.get("button, [role='button']")
       .contains(/Eliminar|Confirmar|Sí|Si/i)
       .then(($btn) => {
@@ -236,15 +238,20 @@ export class FacturasPage {
       });
   }
 
-  // validar que una factura quedó eliminada o ya no está
   expectDeletedOrAbsent(numero: string) {
+    cy.log(
+      `✅ Verificando que la factura "${numero}" ya no esté disponible o esté marcada como eliminada…`
+    );
     this.rowByNumero(numero).then(($row) => {
       if ($row && $row.length) {
-        // si la fila todavía está, debe decir "Eliminada"
-        cy.wrap($row).contains(/Eliminad[oa]/i).should("exist");
+        cy.wrap($row)
+          .contains(/Eliminad[oa]/i)
+          .should("exist", "✅ La factura sigue en la tabla pero ya aparece como eliminada.");
       } else {
-        // si ya no está la fila, también es válido
-        cy.contains(numero).should("not.exist");
+        cy.contains(numero).should(
+          "not.exist",
+          "✅ La factura ya no aparece en el listado (eliminada)."
+        );
       }
     });
   }

@@ -1,54 +1,64 @@
+// k6-invoices.js
 // ======================================================================
-// 💡 Test de performance con k6
-// Escenario: Consultar facturas en la API de Contalink durante 30 segundos
-// Objetivo: Verificar estabilidad y velocidad de respuesta
+// 💡 Test de performance con k6 para Contalink
+// ----------------------------------------------------------------------
+// Qué hace este script:
+//   - Le pega 30 segundos al endpoint de facturas
+//   - A 20 requests por segundo (RPS)
+//   - Valida que casi todas las respuestas sean rápidas (< 800 ms)
+//   - Al final imprime un resumen bonito
+//   - Y si está corriendo en GitHub Actions, también imprime anotaciones
+//     que se ven en la pestaña de Actions.
 // ======================================================================
 
-// Importamos los módulos base de k6
-import http from "k6/http";     // Para hacer solicitudes HTTP
-import { check, sleep } from "k6"; // Para validaciones y pausas entre requests
-import { Trend } from "k6/metrics"; // Para crear métricas personalizadas (tiempos, etc.)
+import http from "k6/http";           // para hacer solicitudes HTTP
+import { check, sleep } from "k6";    // para validar y pausar
+import { Trend } from "k6/metrics";   // para guardar tiempos personalizados
 
 // ----------------------------------------------------------------------
 // ⚙️ CONFIGURACIÓN DEL TEST
 // ----------------------------------------------------------------------
+// Aquí definimos: cuántos segundos, cuántas peticiones por segundo,
+// y cuáles son los “mínimos aceptables” para decir que la API está bien.
 export const options = {
   scenarios: {
-    // Definimos un escenario llamado "prueba_constante"
+    // le puse nombre al escenario solo para que se entienda en el output
     prueba_constante: {
-      executor: "constant-arrival-rate", // Tipo de ejecución: ritmo constante de solicitudes
-      rate: 20,                          // 🔢 20 peticiones por segundo
-      timeUnit: "1s",                    // Cada segundo se inician 20 peticiones
-      duration: "30s",                   // 🕒 Durará 30 segundos
-      preAllocatedVUs: 20,               // Usuarios virtuales mínimos preasignados
-      maxVUs: 50,                        // Máximo de VUs que puede escalar
+      executor: "constant-arrival-rate", // ritmo constante de peticiones
+      rate: 20,                          // 👈 20 peticiones por segundo
+      timeUnit: "1s",
+      duration: "30s",                   // 👈 durante 30 segundos
+      preAllocatedVUs: 20,               // reserva 20 VUs
+      maxVUs: 50,                        // puede subir hasta 50 si hace falta
     },
   },
   thresholds: {
-    // Límites de aceptación (si se superan, k6 marcará el test como fallido)
-    http_req_failed: ["rate<0.05"],      // Menos del 5% de fallos permitidos
-    http_req_duration: ["p(95)<800"],    // 95% de las respuestas deben tardar < 800ms
+    // si más del 5% falla → el test aparece como fallido
+    "http_req_failed": ["rate<0.05"],
+    // si el p95 se pasa de 800ms → también lo marca
+    "http_req_duration": ["p(95)<800"],
   },
 };
 
 // ----------------------------------------------------------------------
-// 🔗 DATOS DE LA PRUEBA
+// 🔗 DATOS DE LA PRUEBA (ajusta estos tres primero si cambias de entorno)
 // ----------------------------------------------------------------------
-const BASE_URL = "https://candidates-api.contalink.com"; // URL base del servicio
-const ENDPOINT = "/V1/invoices?page=1&invoice_number=FAC-7081986"; // Endpoint a probar
-const AUTH_TOKEN = "UXTY789@!!1"; // ⚠️ Token hardcodeado (debería venir de variables de entorno)
+const BASE_URL = "https://candidates-api.contalink.com";
+const ENDPOINT = "/V1/invoices?page=1&invoice_number=FAC-7081986";
+// ⚠️ en serio: en un proyecto real, este token debería venir por env: __ENV.AUTH_TOKEN
+const AUTH_TOKEN = "UXTY789@!!1";
 
-// Creamos una métrica personalizada para medir tiempos de respuesta
+// métrica personalizada: guardo todos los tiempos de respuesta
 const tiempoRespuesta = new Trend("tiempo_respuesta_ms", true);
 
 // ----------------------------------------------------------------------
 // 🚀 ESCENARIO PRINCIPAL
 // ----------------------------------------------------------------------
 export default function () {
-  // 🔗 Construimos la URL completa a la que se enviará la solicitud
+  // 1) Armo la URL
   const url = `${BASE_URL}${ENDPOINT}`;
 
-  // 📡 Enviamos una petición GET autenticada
+  // 2) Hago la petición con header Authorization
   const res = http.get(url, {
     headers: {
       Authorization: AUTH_TOKEN,
@@ -56,48 +66,45 @@ export default function () {
     },
   });
 
-  // ✅ Validamos respuestas por cada request
+  // 3) Validaciones por cada request
+  //    Las hice con nombres que se entienden en el reporte
   check(res, {
-    "✅ Código 200": (r) => r.status === 200, // Responde correctamente
-    "⚡ Menos de 800ms": (r) => r.timings.duration < 800, // Tiempo aceptable
-    "📦 Contiene 'invoice_number'": (r) =>
-      r.body && r.body.includes("invoice_number"), // Verifica estructura esperada
+    "✅ responde 200 (OK)": (r) => r.status === 200,
+    "⚡ responde en < 800ms": (r) => r.timings.duration < 800,
+    "📦 trae el campo invoice_number": (r) =>
+      r.body && r.body.includes("invoice_number"),
   });
 
-  // 📊 Guardamos el tiempo de respuesta para la métrica personalizada
+  // 4) guardo el tiempo en la métrica personalizada
   tiempoRespuesta.add(res.timings.duration);
 
-  // ⏸️ Pausa corta entre peticiones (simula comportamiento humano)
+  // 5) pausa chiquita
   sleep(0.3);
 }
 
 // ----------------------------------------------------------------------
-// 📊 RESUMEN FINAL (en consola y archivo HTML)
+// 📊 RESUMEN FINAL (se ejecuta UNA sola vez al terminar el test)
 // ----------------------------------------------------------------------
+// k6 llama a handleSummary y lo que devolvemos aquí se imprime
+// y/o se guarda como archivo.
 export function handleSummary(data) {
-  // --------------------------
-  // 1️⃣ Extraemos las métricas clave
-  // --------------------------
+  // 1. saco las métricas que me interesan
   const dur = data.metrics.http_req_duration || {};
   const err = data.metrics.http_req_failed || {};
   const req = data.metrics.http_reqs || {};
 
-  // 🧮 Calculamos valores importantes
-  const promedio = dur.avg ? dur.avg.toFixed(2) : "N/A"; // Tiempo medio de respuesta
-  const p95 = dur["p(95)"] ? dur["p(95)"].toFixed(2) : "N/A"; // Percentil 95
-  const total = req.count || 0; // Número total de requests
-  const errores = typeof err.rate === "number"
-    ? (err.rate * 100).toFixed(2)
-    : "0.00"; // Porcentaje de errores
+  // 2. las vuelvo fáciles de leer
+  const promedio = dur.avg ? dur.avg.toFixed(2) : "N/A";
+  const p95 = dur["p(95)"] ? dur["p(95)"].toFixed(2) : "N/A";
+  const total = req.count || 0;
+  const errores =
+    typeof err.rate === "number" ? (err.rate * 100).toFixed(2) : "0.00";
 
-  // --------------------------
-  // 2️⃣ Detectamos si se ejecuta en GitHub Actions (variable de entorno)
-  // --------------------------
+  // 3. detecto si estoy dentro de GitHub Actions
+  //    (allá la variable GITHUB_ACTIONS viene en el entorno)
   const isCI = !!__ENV.GITHUB_ACTIONS;
 
-  // --------------------------
-  // 3️⃣ Texto bonito para consola
-  // --------------------------
+  // 4. texto bonito para consola local
   const consola = `
 ══════════════════════════════════════════════════════════════
 📘 RESULTADOS DEL TEST DE PERFORMANCE
@@ -111,31 +118,29 @@ export function handleSummary(data) {
    - Total de peticiones: ${total}
 
 🔹 Resultados:
-   - Tasa de errores: ${errores}%  (esperado < 5%)
+   - Tasa de errores: ${errores}%  (objetivo < 5%)
    - Tiempo promedio: ${promedio} ms
-   - Percentil 95: ${p95} ms  (esperado < 800 ms)
+   - Percentil 95: ${p95} ms  (objetivo < 800 ms)
 
 🔹 Conclusión:
-   ${errores < 5 ? "✅ Estable y sin errores significativos." : "⚠️ Hubo fallas o lentitud."}
-   ${p95 < 800 ? "✅ Buen tiempo de respuesta general." : "⚠️ El servicio responde más lento de lo esperado."}
+   ${Number(errores) < 5 ? "✅ Estable y casi sin fallas." : "⚠️ Hubo errores o timeouts."}
+   ${p95 !== "N/A" && Number(p95) < 800 ? "✅ Responde rápido (p95 OK)." : "⚠️ Responde más lento de lo esperado (p95 > 800ms)."}
 
 ══════════════════════════════════════════════════════════════
 `;
 
-  // --------------------------
-  // 4️⃣ Bloques visibles en GitHub Actions
-  // --------------------------
-  // GitHub interpreta "::notice::", "::warning::", "::group::" como anotaciones especiales
+  // 5. bloque especial para GitHub Actions
+  //    esto hace que en Actions se vea un grupito “Resumen k6 – invoices”
   let gha = "";
   if (isCI) {
-    gha += "::group::Resumen k6 – invoices\n"; // Agrupa el resumen
+    gha += "::group::Resumen k6 – invoices\n";
     gha += `endpoint=${BASE_URL}${ENDPOINT}\n`;
     gha += `total_reqs=${total}\n`;
     gha += `avg_ms=${promedio}\n`;
     gha += `p95_ms=${p95}\n`;
     gha += `error_rate=${errores}%\n`;
 
-    // 🔔 Si algo está fuera de objetivo, mostramos advertencias
+    // avisos sencillos
     if (Number(errores) >= 5) {
       gha += "::warning::La tasa de errores fue mayor o igual al 5%\n";
     } else {
@@ -151,9 +156,7 @@ export function handleSummary(data) {
     gha += "::endgroup::\n";
   }
 
-  // --------------------------
-  // 5️⃣ Reporte HTML visual (artefacto del workflow)
-  // --------------------------
+  // 6. HTML simple para subirlo como artefacto en el workflow
   const html = `
 <!DOCTYPE html>
 <html lang="es">
@@ -195,10 +198,10 @@ export function handleSummary(data) {
 
   <div class="card">
     <h2>Conclusión</h2>
-    <p>${errores < 5
+    <p>${Number(errores) < 5
       ? '<span class="ok">✔ El servicio fue estable y sin errores graves.</span>'
       : '<span class="warn">✖ Se detectaron errores durante la ejecución.</span>'}</p>
-    <p>${p95 < 800
+    <p>${p95 !== "N/A" && Number(p95) < 800
       ? '<span class="ok">✔ Los tiempos de respuesta fueron aceptables.</span>'
       : '<span class="warn">✖ El servicio respondió más lento de lo esperado.</span>'}</p>
   </div>
@@ -211,11 +214,11 @@ export function handleSummary(data) {
 </html>
 `;
 
-  // --------------------------
-  // 6️⃣ Devolvemos el resumen a k6
-  // --------------------------
+  // 7. devolvemos lo que k6 tiene que escribir
   return {
-    stdout: consola + (isCI ? gha : ""), // 📤 Lo que se imprime en consola/CI
-    "report.html": html,                 // 🗂️ Archivo HTML generado
+    // lo que ves en la terminal
+    stdout: consola + (isCI ? gha : ""),
+    // lo que se guarda como archivo (lo sube el workflow)
+    "report.html": html,
   };
 }
