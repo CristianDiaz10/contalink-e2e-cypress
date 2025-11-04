@@ -1,25 +1,92 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <title>Reporte k6 - Invoices</title>
+
   <style>
-    body { font-family: Arial, sans-serif; margin: 2rem; background: #f5f5f5; }
-    h1 { color: #222; }
-    .card { background: white; padding: 1.5rem 2rem; margin-bottom: 1rem; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,.05); }
-    .title { font-weight: bold; margin-bottom: .5rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-    th, td { padding: .5rem .75rem; border-bottom: 1px solid #eee; text-align: left; }
-    th { background: #fafafa; }
-    code { background: #eee; padding: .25rem .5rem; border-radius: 4px; }
-    .ok { color: #2e7d32; font-weight: bold; }
-    .warn { color: #c62828; font-weight: bold; }
+    /* ==========================================================
+       🎨 ESTILOS GENERALES DEL REPORTE
+       ----------------------------------------------------------
+       Este bloque define el diseño visual del reporte HTML que
+       muestra los resultados de las pruebas de rendimiento (k6)
+       de forma más clara y legible para usuarios no técnicos.
+    ========================================================== */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      color: #222;
+    }
+
+    /* 📦 Tarjetas con fondo blanco que agrupan cada sección */
+    .card {
+      background: white;
+      padding: 1.5rem 2rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, .05);
+    }
+
+    .title {
+      font-weight: bold;
+      margin-bottom: .5rem;
+    }
+
+    /* 📊 Tablas para métricas (tiempos, errores, etc.) */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    th, td {
+      padding: .5rem .75rem;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+    }
+
+    th {
+      background: #fafafa;
+    }
+
+    /* 💻 Para resaltar comandos en consola */
+    code {
+      background: #eee;
+      padding: .25rem .5rem;
+      border-radius: 4px;
+    }
+
+    /* ✅ y ⚠️ Colores visuales para interpretación rápida */
+    .ok {
+      color: #2e7d32; /* verde */
+      font-weight: bold;
+    }
+
+    .warn {
+      color: #c62828; /* rojo */
+      font-weight: bold;
+    }
   </style>
 </head>
+
 <body>
+  <!-- ==========================================================
+       🧠 ENCABEZADO DEL REPORTE
+       ----------------------------------------------------------
+       Muestra el título principal del reporte.
+  ========================================================== -->
   <h1>Reporte de performance - k6</h1>
 
+  <!-- ==========================================================
+       📋 SECCIÓN 1: RESUMEN GENERAL DE LA PRUEBA
+       ----------------------------------------------------------
+       Aquí se describe qué endpoint se probó, la duración total,
+       la carga (RPS: requests por segundo) y el total de requests.
+  ========================================================== -->
   <div class="card">
     <div class="title">Resumen</div>
     <p><strong>Endpoint:</strong> https://candidates-api.contalink.com/V1/invoices?page=1&invoice_number=FAC-7081986</p>
@@ -28,22 +95,42 @@
     <p><strong>Total de requests:</strong> 0</p>
   </div>
 
+  <!-- ==========================================================
+       📈 SECCIÓN 2: MÉTRICAS PRINCIPALES
+       ----------------------------------------------------------
+       Contiene los indicadores clave de rendimiento medidos por k6:
+       - Tasa de errores
+       - Promedio de respuesta
+       - Percentil 95 (p95)
+       Aquí también se puede añadir un campo "Throughput" si se desea.
+  ========================================================== -->
   <div class="card">
     <div class="title">Métricas</div>
     <table>
       <tr><th>Métrica</th><th>Valor</th><th>Esperado</th></tr>
-      <tr><td>Tasa de errores</td><td>0.00%</td><td>< 5%</td></tr>
+      <tr><td>Tasa de errores</td><td>0.00%</td><td>&lt; 5%</td></tr>
       <tr><td>Promedio (ms)</td><td>N/A</td><td>-</td></tr>
-      <tr><td>p95 (ms)</td><td>N/A</td><td>< 800</td></tr>
+      <tr><td>p95 (ms)</td><td>N/A</td><td>&lt; 800</td></tr>
     </table>
   </div>
 
+  <!-- ==========================================================
+       🧐 SECCIÓN 3: INTERPRETACIÓN HUMANA
+       ----------------------------------------------------------
+       Muestra un texto simple que ayude a entender si el resultado
+       fue aceptable o no sin tener que interpretar métricas técnicas.
+  ========================================================== -->
   <div class="card">
     <div class="title">Interpretación</div>
     <p><span class="ok">OK:</span> el servicio respondió bien bajo la carga definida.</p>
     <p><span class="warn">Atención:</span> los tiempos están por arriba del objetivo.</p>
   </div>
 
+  <!-- ==========================================================
+       💻 SECCIÓN 4: COMANDO USADO
+       ----------------------------------------------------------
+       Para reproducir la prueba en local o CI/CD.
+  ========================================================== -->
   <div class="card">
     <div class="title">Comando usado</div>
     <p><code>k6 run k6-invoices.js</code></p>

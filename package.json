@@ -1,23 +1,87 @@
 {
-  "name": "contalink-e2e-cypress-cucumber-pom",
+  // ============================================================
+  // 📦 INFORMACIÓN GENERAL DEL PROYECTO
+  // ============================================================
+
+  "name": "contalink-e2e-cypress-cucumber-pom",  
+  // 👉 Nombre del proyecto. No afecta la ejecución, solo sirve
+  // para identificarlo dentro de npm o GitHub.
+
   "version": "3.0.0",
+  // 👉 Versión actual del proyecto (puedes incrementarla manualmente).
+
   "private": true,
+  // 👉 Evita que este paquete se publique por accidente en npm.
+
   "description": "E2E tests with Cypress + Cucumber + TypeScript + POM for candidates-qa.contalink.com",
+  // 👉 Breve descripción de lo que hace el proyecto:
+  // Pruebas end-to-end usando Cypress, Cucumber y Page Object Model (POM)
+  // apuntando al entorno QA de Contalink.
+
+  // ============================================================
+  // 🧠 SCRIPTS DISPONIBLES
+  // ============================================================
   "scripts": {
+    // ----------------------------------------------------------
+    // Abre el entorno visual de Cypress (modo interactivo)
+    // Ideal para depurar, ver pasos en tiempo real, hacer debug, etc.
     "cy:open": "cypress open --browser chrome",
+
+    // ----------------------------------------------------------
+    // Ejecuta Cypress en modo headless (sin interfaz)
+    // pero con la ventana del navegador visible (--headed)
     "cy:run": "cypress run --headed --browser chrome",
+
+    // ----------------------------------------------------------
+    // Ejecuta las pruebas completamente en segundo plano (headless)
+    // útil para CI/CD (por ejemplo en GitHub Actions)
     "cy:headless": "cypress run --browser chrome",
+
+    // ----------------------------------------------------------
+    // Alias del script principal de test.
+    // Cuando ejecutas `npm test`, corre las pruebas headless.
     "test": "npm run cy:run"
   },
+
+  // ============================================================
+  // 🔧 DEPENDENCIAS DE DESARROLLO
+  // ============================================================
   "devDependencies": {
+    // ----------------------------------------------------------
+    // 🥒 Plugin principal que permite escribir tests con Cucumber
+    // usando sintaxis Gherkin (.feature + Given/When/Then)
     "@badeball/cypress-cucumber-preprocessor": "^20.1.2",
+
+    // ----------------------------------------------------------
+    // 🔧 Integra Cypress con esbuild (transpilador rápido para TypeScript)
     "@bahmutov/cypress-esbuild-preprocessor": "^2.2.7",
+
+    // ----------------------------------------------------------
+    // 📘 Tipos de Node.js (para autocompletado y TS intellisense)
     "@types/node": "^20.14.9",
+
+    // ----------------------------------------------------------
+    // ✅ Librería de aserciones usada por Cypress y Cucumber
     "chai": "^6.2.0",
+
+    // ----------------------------------------------------------
+    // 🧪 Cypress en sí (framework de pruebas E2E)
     "cypress": "^13.17.0",
+
+    // ----------------------------------------------------------
+    // 🔍 Permite usar selectores XPath dentro de Cypress
     "cypress-xpath": "^2.0.1",
+
+    // ----------------------------------------------------------
+    // 🌱 Carga variables desde archivos .env (para tokens y URLs)
     "dotenv": "^17.2.3",
+
+    // ----------------------------------------------------------
+    // ⚙️ Transpilador ultrarrápido que compila TypeScript
     "esbuild": "^0.24.2",
+
+    // ----------------------------------------------------------
+    // 🧩 Tipado fuerte con TypeScript
     "typescript": "^5.6.3"
   }
 }

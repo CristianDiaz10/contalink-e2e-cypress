@@ -1,3 +1,34 @@
 {
-  "stepDefinitions": ["cypress/e2e/step_definitions/**/*.{ts,js}"]
+  // ============================================================
+  // 📘 CONFIGURACIÓN DE CUCUMBER PARA CYPRESS
+  // ------------------------------------------------------------
+  // Este archivo le indica al preprocesador de Cucumber
+  // (usado por Cypress) dónde están las definiciones de pasos
+  // que implementan los escenarios escritos en los archivos .feature.
+  // --
+  // Básicamente: conecta los textos del tipo
+  //   "Dado que abro la app"
+  // con el código que los ejecuta en TypeScript o JavaScript.
+  // ============================================================
+
+  "stepDefinitions": [
+    // ----------------------------------------------------------
+    // 📂 RUTA DONDE SE GUARDAN LOS STEPS
+    // ----------------------------------------------------------
+    // Le decimos que busque en:
+    //   cypress/e2e/step_definitions/
+    //
+    // Y que incluya TODOS los archivos dentro (sin importar subcarpetas)
+    // que terminen con extensión .ts o .js.
+    //
+    // Así detectará automáticamente todos los archivos tipo:
+    //   - login.steps.ts
+    //   - facturas.steps.ts
+    //   - api.steps.js
+    //
+    // Si en el futuro cambias la carpeta de ubicación de tus steps,
+    // actualiza esta ruta.
+    // ----------------------------------------------------------
+    "cypress/e2e/step_definitions/**/*.{ts,js}"
+  ]
 }
