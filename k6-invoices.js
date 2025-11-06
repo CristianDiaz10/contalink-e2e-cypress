@@ -2,109 +2,101 @@
 // ======================================================================
 // 💡 Test de performance con k6 para Contalink
 // ----------------------------------------------------------------------
-// Qué hace este script:
-//   - Le pega 30 segundos al endpoint de facturas
-//   - A 20 requests por segundo (RPS)
-//   - Valida que casi todas las respuestas sean rápidas (< 800 ms)
-//   - Al final imprime un resumen bonito
-//   - Y si está corriendo en GitHub Actions, también imprime anotaciones
-//     que se ven en la pestaña de Actions.
+// Este script:
+//  - Ataca el endpoint de facturas por 30s
+//  - Mantiene 20 requests por segundo
+//  - Revisa que casi todas las respuestas sean rápidas (< 800ms)
+//  - Al final imprime un resumen
+//  - Y si corre en GitHub Actions, imprime un bloque especial para verlo ahí
 // ======================================================================
 
-import http from "k6/http";           // para hacer solicitudes HTTP
-import { check, sleep } from "k6";    // para validar y pausar
-import { Trend } from "k6/metrics";   // para guardar tiempos personalizados
+import http from "k6/http";           // ← librería de k6 para hacer requests HTTP
+import { check, sleep } from "k6";    // ← 'check' = asserts de k6, 'sleep' = pequeñas pausas
+import { Trend } from "k6/metrics";   // ← para crear una métrica personalizada (tiempos)
 
 // ----------------------------------------------------------------------
 // ⚙️ CONFIGURACIÓN DEL TEST
 // ----------------------------------------------------------------------
-// Aquí definimos: cuántos segundos, cuántas peticiones por segundo,
-// y cuáles son los “mínimos aceptables” para decir que la API está bien.
 export const options = {
-  scenarios: {
-    // le puse nombre al escenario solo para que se entienda en el output
-    prueba_constante: {
-      executor: "constant-arrival-rate", // ritmo constante de peticiones
-      rate: 20,                          // 👈 20 peticiones por segundo
-      timeUnit: "1s",
-      duration: "30s",                   // 👈 durante 30 segundos
-      preAllocatedVUs: 20,               // reserva 20 VUs
-      maxVUs: 50,                        // puede subir hasta 50 si hace falta
+  scenarios: {                        // ← aquí defino "cómo" se va a ejecutar la prueba
+    prueba_constante: {               // ← nombre del escenario (solo para identificarlo)
+      executor: "constant-arrival-rate", // ← k6 va a mantener un RITMO constante
+      rate: 20,                       // ← 20 peticiones por segundo (esto te pidieron)
+      timeUnit: "1s",                 // ← o sea, esos 20 son por cada 1 segundo
+      duration: "30s",                // ← tiempo total de la prueba
+      preAllocatedVUs: 20,            // ← reserva 20 usuarios virtuales de entrada
+      maxVUs: 50,                     // ← si necesita más para mantener los 20 rps, puede subir hasta 50
     },
   },
-  thresholds: {
-    // si más del 5% falla → el test aparece como fallido
-    "http_req_failed": ["rate<0.05"],
-    // si el p95 se pasa de 800ms → también lo marca
-    "http_req_duration": ["p(95)<800"],
+  thresholds: {                       // ← reglas de "esto es aceptable / esto no"
+    "http_req_failed": ["rate<0.05"], // ← menos del 5% de requests deben fallar
+    "http_req_duration": ["p(95)<800"], // ← el 95% debe tardar menos de 800ms
   },
 };
 
 // ----------------------------------------------------------------------
-// 🔗 DATOS DE LA PRUEBA (ajusta estos tres primero si cambias de entorno)
+// 🔗 DATOS DE LA PRUEBA
 // ----------------------------------------------------------------------
-const BASE_URL = "https://candidates-api.contalink.com";
-const ENDPOINT = "/V1/invoices?page=1&invoice_number=FAC-7081986";
-// ⚠️ en serio: en un proyecto real, este token debería venir por env: __ENV.AUTH_TOKEN
-const AUTH_TOKEN = "UXTY789@!!1";
+const BASE_URL = "https://candidates-api.contalink.com";  // ← base del API
+const ENDPOINT = "/V1/invoices?page=1&invoice_number=FAC-7081986"; // ← endpoint real que vas a probar
 
-// métrica personalizada: guardo todos los tiempos de respuesta
-const tiempoRespuesta = new Trend("tiempo_respuesta_ms", true);
+// ⚠️ aquí está hardcodeado, pero en serio esto debería venir de una variable de entorno
+const AUTH_TOKEN = "UXTY789@!!1";      // ← token para que el API te deje pasar
+
+// creo una métrica de k6 para guardar los tiempos de respuesta
+const tiempoRespuesta = new Trend("tiempo_respuesta_ms", true); // ← 'true' = se guarda también por cada VU
 
 // ----------------------------------------------------------------------
-// 🚀 ESCENARIO PRINCIPAL
+// 🚀 ESCENARIO PRINCIPAL (esto se ejecuta muchas veces durante los 30s)
 // ----------------------------------------------------------------------
 export default function () {
-  // 1) Armo la URL
-  const url = `${BASE_URL}${ENDPOINT}`;
+  const url = `${BASE_URL}${ENDPOINT}`;   // ← armo la URL completa
 
-  // 2) Hago la petición con header Authorization
+  // hago el GET al API con el token
   const res = http.get(url, {
     headers: {
-      Authorization: AUTH_TOKEN,
-      "Content-Type": "application/json",
+      Authorization: AUTH_TOKEN,          // ← auth del API
+      "Content-Type": "application/json", // ← por si el API lo pide
     },
   });
 
-  // 3) Validaciones por cada request
-  //    Las hice con nombres que se entienden en el reporte
+  // valido la respuesta de cada request
   check(res, {
-    "✅ responde 200 (OK)": (r) => r.status === 200,
-    "⚡ responde en < 800ms": (r) => r.timings.duration < 800,
+    "✅ responde 200 (OK)": (r) => r.status === 200,                 // ← el API respondió ok
+    "⚡ responde en < 800ms": (r) => r.timings.duration < 800,       // ← fue rápido
     "📦 trae el campo invoice_number": (r) =>
-      r.body && r.body.includes("invoice_number"),
+      r.body && r.body.includes("invoice_number"),                  // ← la respuesta se ve como la esperamos
   });
 
-  // 4) guardo el tiempo en la métrica personalizada
+  // guardo el tiempo de esta respuesta en la métrica personalizada
   tiempoRespuesta.add(res.timings.duration);
 
-  // 5) pausa chiquita
+  // pequeña pausa para no ser 100% robot (igual el executor mantiene los 20 rps)
   sleep(0.3);
 }
 
 // ----------------------------------------------------------------------
-// 📊 RESUMEN FINAL (se ejecuta UNA sola vez al terminar el test)
+// 📊 RESUMEN FINAL
 // ----------------------------------------------------------------------
-// k6 llama a handleSummary y lo que devolvemos aquí se imprime
-// y/o se guarda como archivo.
+// k6 llama a esta función UNA sola vez al terminar toda la prueba.
+// Aquí armamos el texto bonito y el HTML.
 export function handleSummary(data) {
-  // 1. saco las métricas que me interesan
-  const dur = data.metrics.http_req_duration || {};
-  const err = data.metrics.http_req_failed || {};
-  const req = data.metrics.http_reqs || {};
+  // saco las métricas de k6 (si no vienen, pongo objeto vacío)
+  const dur = data.metrics.http_req_duration || {}; // ← tiempos
+  const err = data.metrics.http_req_failed || {};   // ← errores
+  const req = data.metrics.http_reqs || {};         // ← cuántos requests se hicieron
 
-  // 2. las vuelvo fáciles de leer
-  const promedio = dur.avg ? dur.avg.toFixed(2) : "N/A";
-  const p95 = dur["p(95)"] ? dur["p(95)"].toFixed(2) : "N/A";
-  const total = req.count || 0;
+  // convierto a números fáciles de leer
+  const promedio = dur.avg ? dur.avg.toFixed(2) : "N/A";       // ← tiempo promedio
+  const p95 = dur["p(95)"] ? dur["p(95)"].toFixed(2) : "N/A";  // ← el p95
+  const total = req.count || 0;                                // ← cuántas peticiones se hicieron
   const errores =
-    typeof err.rate === "number" ? (err.rate * 100).toFixed(2) : "0.00";
+    typeof err.rate === "number" ? (err.rate * 100).toFixed(2) : "0.00"; // ← porcentaje de error
 
-  // 3. detecto si estoy dentro de GitHub Actions
-  //    (allá la variable GITHUB_ACTIONS viene en el entorno)
-  const isCI = !!__ENV.GITHUB_ACTIONS;
+  // veo si estoy corriendo dentro de GitHub Actions
+  const isCI = !!__ENV.GITHUB_ACTIONS; // ← si existe esa env, estamos en CI
 
-  // 4. texto bonito para consola local
+  // texto para consola (local o CI)
   const consola = `
 ══════════════════════════════════════════════════════════════
 📘 RESULTADOS DEL TEST DE PERFORMANCE
@@ -129,34 +121,34 @@ export function handleSummary(data) {
 ══════════════════════════════════════════════════════════════
 `;
 
-  // 5. bloque especial para GitHub Actions
-  //    esto hace que en Actions se vea un grupito “Resumen k6 – invoices”
+  // bloque especial para que en GitHub Actions se vea agrupado
   let gha = "";
   if (isCI) {
-    gha += "::group::Resumen k6 – invoices\n";
+    gha += "::group::Resumen k6 – invoices\n"; // ← abre un grupo plegable en Actions
     gha += `endpoint=${BASE_URL}${ENDPOINT}\n`;
     gha += `total_reqs=${total}\n`;
     gha += `avg_ms=${promedio}\n`;
     gha += `p95_ms=${p95}\n`;
     gha += `error_rate=${errores}%\n`;
 
-    // avisos sencillos
+    // si la tasa de error es alta, marcamos warning en GH
     if (Number(errores) >= 5) {
       gha += "::warning::La tasa de errores fue mayor o igual al 5%\n";
     } else {
       gha += "::notice::Tasa de errores dentro del objetivo (<5%)\n";
     }
 
+    // si el p95 está pasado, también avisamos
     if (p95 !== "N/A" && Number(p95) >= 800) {
       gha += "::warning::El p95 estuvo por encima de 800ms\n";
     } else {
       gha += "::notice::p95 dentro del objetivo (<800ms)\n";
     }
 
-    gha += "::endgroup::\n";
+    gha += "::endgroup::\n"; // ← cierra el grupo
   }
 
-  // 6. HTML simple para subirlo como artefacto en el workflow
+  // HTML que vamos a subir como artefacto (para verlo bonito)
   const html = `
 <!DOCTYPE html>
 <html lang="es">
@@ -214,11 +206,9 @@ export function handleSummary(data) {
 </html>
 `;
 
-  // 7. devolvemos lo que k6 tiene que escribir
+  // le decimos a k6 qué imprimir y qué guardar
   return {
-    // lo que ves en la terminal
-    stdout: consola + (isCI ? gha : ""),
-    // lo que se guarda como archivo (lo sube el workflow)
-    "report.html": html,
+    stdout: consola + (isCI ? gha : ""), // ← lo que se ve en terminal
+    "report.html": html,                 // ← archivo que sube GitHub Actions
   };
 }
