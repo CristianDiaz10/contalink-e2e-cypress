@@ -9,84 +9,80 @@
 // Esto se conecta con los .feature.
 // ====================================================================
 
-import { Given, When, Then } from "@badeball/cypress-cucumber-preprocessor"; // steps de Cucumber
-import { expect } from "chai";                                                // para los asserts
-import { loginPage } from "@pages/login.page";                                // mi POM de login
-import { facturasPage } from "@pages/facturas.page";                          // mi POM de facturas
+import { Given, When, Then } from "@badeball/cypress-cucumber-preprocessor"; // 👉 importo las palabras clave de Cucumber (Given/When/Then)
+import { expect } from "chai";                                                // 👉 uso chai para hacer asserts bonitos
+import { loginPage } from "@pages/login.page";                                // 👉 mi Page Object de login
+import { facturasPage } from "@pages/facturas.page";                          // 👉 mi Page Object de facturas
 
 // ────────────────────────────────────────────────────────────────────
 // LOGIN
 // ────────────────────────────────────────────────────────────────────
 
 // Step: "Given que abro la app"
-// -> solo abre la URL base que tengo en cypress.config.ts
 Given("que abro la app", () => {
-  cy.log("🌐 Abriendo la aplicación...");
-  loginPage.visit();
+  cy.log("🌐 Abriendo la aplicación..."); // 👉 dejo traza en el runner para humanos
+  loginPage.visit();                     // 👉 delego al POM la visita al login
 });
 
 // Step: "When ingreso el código de acceso válido"
-// -> uso primero ACCESS_CODE si viene de env, si no AUTH_TOKEN, si no el hardcoded
 When("ingreso el código de acceso válido", () => {
-  // 1. saco el código desde env o pongo el que me dieron
+  // 👉 primero intento leer el código desde variables de entorno
   const code =
-    Cypress.env("ACCESS_CODE") ||       // primero intento con ACCESS_CODE
-    Cypress.env("AUTH_TOKEN") ||        // si no hay, uso el token
-    "UXTY789@!!1";                      // fallback fijo
+    Cypress.env("ACCESS_CODE") ||       // 👉 si en GitHub o local pongo ACCESS_CODE, uso ese
+    Cypress.env("AUTH_TOKEN") ||        // 👉 si no, pruebo con AUTH_TOKEN
+    "UXTY789@!!1";                      // 👉 si nada viene, uso este hardcodeado
 
-  cy.log(`🔐 Ingresando código de acceso: ${code}`);
+  cy.log(`🔐 Ingresando código de acceso: ${code}`); // 👉 para que en el log quede claro qué se usó
 
-  // 2. escribo el código en el input que ya vimos en la app (#access-code)
-  cy.get("#access-code", { timeout: 10000 })
-    .should("be.visible")               // me aseguro que ya cargó
-    .clear()
-    .type(String(code));
+  cy.get("#access-code", { timeout: 10000 }) // 👉 espero a que el input exista
+    .should("be.visible")                   // 👉 y que se vea
+    .clear()                                // 👉 limpio lo que tenga
+    .type(String(code));                    // 👉 escribo el código
 
-  // 3. clic en el botón de entrar (hay más de uno, por eso el .first())
-  cy.get('button[type="submit"], button#access-submit', { timeout: 10000 })
-    .first()
-    .click();
+  cy.get('button[type="submit"], button#access-submit', { timeout: 10000 }) // 👉 hay más de un botón, por eso uso dos selectores
+    .first()                                                              // 👉 tomo el primero que encuentre
+    .click();                                                             // 👉 lo clickeo
 
-  cy.log("✅ Código enviado, esperando que cargue el dashboard...");
+  cy.log("✅ Código enviado, esperando que cargue el dashboard..."); // 👉 mensaje amigable
 });
 
-// Step: "When ingreso un código de acceso inválido '123'"
-// -> reutilizo los métodos del POM de login
+// Step: "When ingreso un código de acceso inválido "123""
 When("ingreso un código de acceso inválido {string}", (codigo: string) => {
-  cy.log(`🔐 Probando código inválido: ${codigo}`);
-  loginPage.fillAccessCode(codigo);
-  loginPage.submit();
+  cy.log(`🔐 Probando código inválido: ${codigo}`); // 👉 dejo claro que es un caso negativo
+  loginPage.fillAccessCode(codigo);                // 👉 escribo el código malo
+  loginPage.submit();                              // 👉 envío SIN esperar éxito
 });
 
 // Step: "Then debo ver el dashboard"
-// -> la app quita el input cuando ya entré, así que valido que ya NO exista
 Then("debo ver el dashboard", () => {
-  cy.log("👀 Verificando que ya no aparezca la pantalla de acceso...");
-  // 1. ya no debe existir el input de código
-  cy.get("#access-code", { timeout: 10000 }).should(
-    "not.exist",
-    "Ya no debe mostrarse el input de acceso porque el login fue correcto"
-  );
-  // 2. opcional: la URL ya no debe tener "login"
-  cy.url().should(
+  cy.log("👀 Verificando que ya no aparezca la pantalla de acceso..."); // 👉 explico qué estoy validando
+
+  cy.get("#access-code", { timeout: 10000 })                   // 👉 busco el input de acceso
+    .should(                                                   // 👉 y afirmo que…
+      "not.exist",                                             // 👉 …ya no debe existir
+      "Ya no debe mostrarse el input de acceso porque el login fue correcto"
+    );
+
+  cy.url().should(                                             // 👉 segunda validación: la URL ya no debe ser de login
     "not.include",
     "login",
     "La URL no debe seguir en la pantalla de login"
   );
-  cy.log("🏠 Dashboard visible (o al menos ya no estamos en login).");
+
+  cy.log("🏠 Dashboard visible (o al menos ya no estamos en login)."); // 👉 mensaje final
 });
 
-// Step para cuando el login falla
+// Step: "Then debo ver un mensaje de error de acceso"
 Then("debo ver un mensaje de error de acceso", () => {
-  cy.log("❗ Verificando que la app mostró un mensaje de error de acceso...");
-  loginPage.expectAccessError();
-  loginPage.expectAccessScreen();
-  cy.log("✅ La app se quedó en la pantalla de acceso (como debía).");
+  cy.log("❗ Verificando que la app mostró un mensaje de error de acceso..."); // 👉 indico que es un caso de error
+  loginPage.expectAccessError();                                              // 👉 delego al POM la validación del error
+  loginPage.expectAccessScreen();                                             // 👉 y que sigamos en la pantalla de acceso
+  cy.log("✅ La app se quedó en la pantalla de acceso (como debía).");        // 👉 confirmo
 });
 
-// Igual que el anterior pero con otro wording en el feature
+// Step igual pero con otro texto en el .feature
 Then("debo ver un mensaje de error y no ingresar", () => {
-  cy.log("❗ Verificando mensaje de error de acceso...");
+  cy.log("❗ Verificando mensaje de error de acceso..."); // 👉 mismo propósito
   loginPage.expectAccessError();
   loginPage.expectAccessScreen();
   cy.log("✅ No entró a la app con credenciales inválidas.");
@@ -98,14 +94,14 @@ Then("debo ver un mensaje de error y no ingresar", () => {
 
 // Step: "When hago logout"
 When("hago logout", () => {
-  cy.log("🚪 Haciendo logout...");
-  loginPage.logout();
+  cy.log("🚪 Haciendo logout..."); // 👉 para que se sepa qué está pasando
+  loginPage.logout();             // 👉 POM hace clic en el botón y valida que volvió al login
 });
 
 // Step: "Then debo regresar a la pantalla de acceso"
 Then("debo regresar a la pantalla de acceso", () => {
-  cy.log("👀 Verificando que volvimos a la pantalla de acceso...");
-  loginPage.expectAccessScreen();
+  cy.log("👀 Verificando que volvimos a la pantalla de acceso..."); // 👉 explicación
+  loginPage.expectAccessScreen();                                   // 👉 validación real
   cy.log("✅ Logout confirmado, estamos en la pantalla de acceso.");
 });
 
@@ -114,95 +110,91 @@ Then("debo regresar a la pantalla de acceso", () => {
 // ────────────────────────────────────────────────────────────────────
 
 // Step: "When creo una nueva factura válida"
-// -> aquí hago TODO el flujo de la pantalla de facturas
 When("creo una nueva factura válida", () => {
-  // 1. saco los datos que puse en cypress.config.ts → env
-  const numero = Cypress.env("INVOICE_NUMBER");
-  const total = Cypress.env("INVOICE_TOTAL");
-  const estado = Cypress.env("INVOICE_STATUS") || "Vigente";
+  // 👉 obtengo los datos de prueba desde env (pueden venir de GitHub Actions)
+  const numero = Cypress.env("INVOICE_NUMBER");           // 👉 ej. FACTURA-CRIS
+  const total = Cypress.env("INVOICE_TOTAL");             // 👉 ej. 100
+  const estado = Cypress.env("INVOICE_STATUS") || "Vigente"; // 👉 por defecto "Vigente"
 
   cy.log(
     `🧾 Creando factura desde la UI con: número=${numero}, total=${total}, estado=${estado}`
   );
 
-  // 2. intercepto el POST que hace la app cuando le doy "Crear"
-  //    esto me sirve después en el Then para saber QUÉ creó el backend
+  // 👉 antes de hacer clic en "Crear" intercepto el POST que la app va a hacer
   cy.intercept("POST", "**/V1/invoices").as("createInvoice");
 
-  // 3. también intercepto el GET que la app hace después de crear
-  //    porque la pantalla vuelve a pedir la lista
+  // 👉 también intercepto el GET que la app hace después de crear (para refrescar la tabla)
   cy.intercept("GET", "**/V1/invoices?page=1**").as("listInvoicesAfterCreate");
 
-  // 4. ahora sí, interactúo con la UI usando mi POM
-  facturasPage.clickCrearNueva();               // abre el formulario
-  facturasPage.fillNumeroFactura(numero);       // escribe el número
-  facturasPage.fillTotal(String(total));        // escribe el total
-  facturasPage.selectEstado(estado);            // selecciona "Vigente"
-  facturasPage.submitCrear();                   // guarda y espera el POST
+  // 👉 ahora sí lleno el formulario usando el POM
+  facturasPage.clickCrearNueva();         // 👉 abre el form
+  facturasPage.fillNumeroFactura(numero); // 👉 escribe el número
+  facturasPage.fillTotal(String(total));  // 👉 escribe el total
+  facturasPage.selectEstado(estado);      // 👉 elige el estado (hacemos varios intentos dentro)
+  facturasPage.submitCrear();             // 👉 envía el formulario
 
-  cy.log("✅ Se envió el formulario de creación de factura.");
+  cy.log("✅ Se envió el formulario de creación de factura."); // 👉 dejo constancia
 });
 
 // Step: "Then debo ver la factura creada en la lista con estado Vigente"
-// -> aquí agarro lo que respondió el POST y lo busco en la tabla
 Then("debo ver la factura creada en la lista con estado Vigente", () => {
-  // 1. espero el POST para saber qué se creó
+  // 👉 primero espero a que termine el POST que intercepté arriba
   cy.wait("@createInvoice").then((create) => {
-    const body = create.response?.body || {};
+    const body = create.response?.body || {}; // 👉 guardo el body que devolvió la API
 
-    const createdId = body.id ?? body._id ?? null;
+    const createdId = body.id ?? body._id ?? null; // 👉 id puede venir como id o _id
 
     const createdNumber =
-      body.invoiceNumber ||
-      body.invoice_number ||
-      (Cypress.env("INVOICE_NUMBER") as string);
+      body.invoiceNumber ||                         // 👉 camelCase
+      body.invoice_number ||                        // 👉 snake_case
+      (Cypress.env("INVOICE_NUMBER") as string);    // 👉 o me quedo con el que yo mandé
 
-    const targetId = createdId ? String(createdId).trim() : "";
-    const targetNumber = String(createdNumber || "").trim().toLowerCase();
+    const targetId = createdId ? String(createdId).trim() : "";       // 👉 normalizo id
+    const targetNumber = String(createdNumber || "").trim().toLowerCase(); // 👉 normalizo número
 
-    cy.log(`🆔 id creado por API: ${targetId || "(no vino)"}`);
-    cy.log(`🔎 número creado por API: ${targetNumber}`);
+    cy.log(`🆔 id creado por API: ${targetId || "(no vino)"}`); // 👉 lo muestro para debug
+    cy.log(`🔎 número creado por API: ${targetNumber}`);        // 👉 lo muestro para debug
 
-    // 2. espero a que la pantalla vuelva a pedir la lista
+    // 👉 ahora espero a que la app pida de nuevo la lista
     cy.wait("@listInvoicesAfterCreate");
 
-    // 3. ahora sí, leo las filas de la tabla de facturas
+    // 👉 este es el selector real de la tabla de facturas
     const TABLE_ROWS_SELECTOR =
       "body > app-root > div > div > app-invoices > div.overflow-x-auto.mt-4 > table > tbody tr";
 
-    cy.get(TABLE_ROWS_SELECTOR, { timeout: 15000 })
+    cy.get(TABLE_ROWS_SELECTOR, { timeout: 15000 }) // 👉 espero a que haya filas
       .should(
         "have.length.greaterThan",
         0,
         "La tabla de facturas debe tener al menos 1 registro"
       )
       .then((rows) => {
-        let found = false;
-        const dump: string[] = [];
+        let found = false;         // 👉 bandera para saber si la encontramos
+        const dump: string[] = []; // 👉 aquí guardo todas las filas para imprimirlas
 
         Array.from(rows).forEach((row) => {
-          const rowText = (row.textContent || "").toLowerCase().trim();
-          dump.push(rowText);
+          const rowText = (row.textContent || "").toLowerCase().trim(); // 👉 texto completo de la fila
+          dump.push(rowText);                                           // 👉 la guardo para el log
 
-          const matchById = targetId && rowText.includes(targetId);
-          const matchByNumber =
-            targetNumber && rowText.includes(targetNumber);
-          const matchByStatus = rowText.includes("vigente");
+          const matchById = targetId && rowText.includes(targetId);          // 👉 ¿esta fila contiene el id?
+          const matchByNumber = targetNumber && rowText.includes(targetNumber); // 👉 ¿o contiene el número?
+          const matchByStatus = rowText.includes("vigente");                 // 👉 ¿y dice "vigente"?
 
-          if ((matchById || matchByNumber) && matchByStatus) {
-            found = true;
+          if ((matchById || matchByNumber) && matchByStatus) { // 👉 si cumple id o número + estado
+            found = true;                                      // 👉 ya la encontramos
           }
         });
 
-        // lo dejamos logueado para debug
+        // 👉 imprimo todas las filas para que si falla sea fácil verlo
         cy.log("📋 Filas encontradas en la tabla:");
         cy.log("```text\n" + dump.join("\n---\n") + "\n```");
+        // 👉 también a consola por si lo corremos headless
         // eslint-disable-next-line no-console
         console.log("📋 Filas de la tabla:", dump);
 
         expect(
           found,
-          // 👇 mensaje más sencillo para alguien no técnico
+          // 👉 mensaje pensado para alguien no técnico
           `❌ No se encontró en la tabla la factura recién creada (busqué por id="${targetId}" o número="${targetNumber}" y estado "Vigente"). Revisa si la API sí la devolvió en el listado.`
         ).to.be.true;
 
@@ -214,47 +206,52 @@ Then("debo ver la factura creada en la lista con estado Vigente", () => {
 });
 
 // Step: "When activo incluir facturas eliminadas y busco"
-// -> delego todo al POM de facturas
 When("activo incluir facturas eliminadas y busco", () => {
-  cy.log("🟣 Activando filtro 'Incluir facturas eliminadas' y ejecutando búsqueda...");
-  facturasPage.setIncludeDeletedAndSearch();
+  cy.log("🟣 Activando filtro 'Incluir facturas eliminadas' y ejecutando búsqueda..."); // 👉 dejo traza clara en el runner
+  facturasPage.setIncludeDeletedAndSearch();                                            // 👉 delego al POM la lógica (marcar checkbox + clic en Buscar + esperar respuesta)
 });
 
 // Step: "Then deben mostrarse facturas eliminadas en los resultados"
 Then("deben mostrarse facturas eliminadas en los resultados", () => {
-  cy.log("👀 Buscando en el listado alguna factura marcada como eliminada...");
-  facturasPage.expectDeletedVisible();
-  cy.log("✅ Se encontraron facturas eliminadas en el resultado.");
+  cy.log("👀 Buscando en el listado alguna factura marcada como eliminada..."); // 👉 explico qué voy a validar
+  facturasPage.expectDeletedVisible();                                          // 👉 el POM busca textos tipo “Eliminada” o “Inactiva”
+  cy.log("✅ Se encontraron facturas eliminadas en el resultado.");             // 👉 mensaje entendible para no dev
 });
 
 // Step: "When busco la factura por número"
 When("busco la factura por número", () => {
-  const num = Cypress.env("INVOICE_NUMBER");
-  cy.log(`🔍 Buscando la factura por número: ${num}`);
-  facturasPage.searchByNumero(num);
+  const num = Cypress.env("INVOICE_NUMBER");                    // 👉 tomo el número que definí en env (ej. FACTURA-CRIS)
+  cy.log(`🔍 Buscando la factura por número: ${num}`);           // 👉 lo muestro en el log para saber qué se buscó
+  facturasPage.searchByNumero(num);                             // 👉 POM hace: escribir en el filtro + clic en Buscar + esperar al GET
 });
 
 // Step: "Then debo ver FACTURA-CRIS en los resultados"
 Then("debo ver FACTURA-CRIS en los resultados", () => {
-  const num = Cypress.env("INVOICE_NUMBER");
+  const num = Cypress.env("INVOICE_NUMBER");                    // 👉 mismo número que busqué
   facturasPage
-    .rowByNumero(num)
-    .should("exist", `Debo ver la fila con el número de factura "${num}"`)
-    .and("be.visible", "La fila de esa factura debe mostrarse visible en la tabla");
-  cy.log("✅ La factura buscada aparece en los resultados.");
+    .rowByNumero(num)                                           // 👉 el POM localiza la fila de la tabla que contiene ese número
+    .should(
+      "exist",
+      `Debo ver la fila con el número de factura "${num}"`
+    )                                                           // 👉 si no existe, el mensaje le dice al tester qué esperaba
+    .and(
+      "be.visible",
+      "La fila de esa factura debe mostrarse visible en la tabla"
+    );                                                          // 👉 y además debe ser visible
+  cy.log("✅ La factura buscada aparece en los resultados.");    // 👉 confirmación amigable
 });
 
 // Step: "When elimino la factura FACTURA-CRIS"
 When("elimino la factura FACTURA-CRIS", () => {
-  const num = Cypress.env("INVOICE_NUMBER");
-  cy.log(`🗑️ Eliminando la factura con número: ${num}`);
-  facturasPage.deleteByNumero(num);
+  const num = Cypress.env("INVOICE_NUMBER");                    // 👉 número que quiero borrar
+  cy.log(`🗑️ Eliminando la factura con número: ${num}`);         // 👉 dejo rastro de cuál fue
+  facturasPage.deleteByNumero(num);                             // 👉 POM entra a la fila, clic en eliminar y confirma el modal
 });
 
 // Step: "Then la factura debe eliminarse o quedar con estado Eliminada"
 Then("la factura debe eliminarse o quedar con estado Eliminada", () => {
-  const num = Cypress.env("INVOICE_NUMBER");
-  cy.log("👀 Verificando que la factura fue eliminada o quedó marcada como eliminada...");
-  facturasPage.expectDeletedOrAbsent(num);
-  cy.log("✅ La factura ya no aparece como vigente.");
+  const num = Cypress.env("INVOICE_NUMBER");                    // 👉 misma factura que intenté borrar
+  cy.log("👀 Verificando que la factura fue eliminada o quedó marcada como eliminada..."); // 👉 explicación para humanos
+  facturasPage.expectDeletedOrAbsent(num);                      // 👉 POM valida: o ya no está, o la fila dice “Eliminada”
+  cy.log("✅ La factura ya no aparece como vigente.");           // 👉 mensaje final simple
 });
