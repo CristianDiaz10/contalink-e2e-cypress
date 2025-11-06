@@ -1,4 +1,4 @@
-/ cypress/pages/login.page.ts
+///cypress/pages/login.page.ts
 // ====================================================================
 // 📄 Page Object: LoginPage
 // --------------------------------------------------------------------
@@ -33,7 +33,7 @@ export class LoginPage {
 
   // --------------------------------------------------------------
   // 1️⃣ visitar la pantalla de login
-  // --------------------------------------------------------------
+  // --------------------------------------------------------------6
   visit() {
     cy.log("📄 Abriendo la pantalla de acceso…"); // 👉 Muestra en el panel de Cypress lo que se está haciendo.
     cy.visit(LOGIN_PATH);                        // 👉 Abre la URL base del login ("/").
